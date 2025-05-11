@@ -1,10 +1,26 @@
+//This code is highly based on https://github.com/khonsulabs/budlang/blob/5677822b270d05f68cef324e7db4aaa905548c90/budlang/src/map.rs
+//I simply dont understand fully how a indexmap is implemented so i used it as a base. This is not intended to be used on a real situation since this is 
+//only for studies and educational purposes. 
+//Todo: Instead of using Bin interface, change to Uint32Array for using entry and collision at the same number(it will be limited to 65356 bin possibilites)
+
+/**
+ * An interface that will be used for any type that can be hashable. 
+ */
 interface Hashable {
   hash(): number;
 }
+
+/**
+ * Struct used to get track of the indices on the inserted values on the map
+ */
 interface Bin {
   entry: number; //entry is the index inside the IndexMap.entries
   collision: number; //If not -1, its an index inside IndexMap.entries that makes a single linked list
 }
+
+/**
+ * The actual entry of some
+ */
 interface IndexMapEntry<K extends Hashable, T> {
   key: K,
   value: T
@@ -17,17 +33,18 @@ export class IndexMap<K extends Hashable, T> {
   private binmask: number = 0; //due to limitations not pretending to use f64, this will be forced to be a SMI
   private free_head = -1;
 
+  /**
+   * The length of the indexmap. Refers the the amount of elements inserted.
+   */
   len() {
     return this._len;
   }
+  /**
+   * The capacity of the indexmap. Refers to the amount of bins it's got, even if zeroed ones.
+   */
   capacity() {
     return this.bins.length;
   }
-
-  private set_last_bin(value: Bin) {
-    this.bins[this._len++] = value;
-  }
-
   private should_grow() {
     //check https://github.com/khonsulabs/budlang/blob/5677822b270d05f68cef324e7db4aaa905548c90/budlang/src/map.rs#L163
     const cap = this.bins.length;
@@ -38,7 +55,6 @@ export class IndexMap<K extends Hashable, T> {
     if (cap == 16) return len >= 13;
     return len > ((cap * 0.875) | 0);
   }
-
   private free_index() {
     if (this.free_head == -1) return;
     const curr = this.bins[this.free_head];
@@ -64,6 +80,9 @@ export class IndexMap<K extends Hashable, T> {
       }
     }
   }
+  /**
+   * Check if growing is required, if so, grows and rehashes all the fields.
+   */
   private try_grow() {
     if (this.should_grow()) {
 
@@ -96,7 +115,9 @@ export class IndexMap<K extends Hashable, T> {
       } else bucket = bin.collision;
     }
   }
-
+  /**
+  * Inserts an element that maps to the given value.
+  */
   insert(key: K, value: T): T | void {
     const hash = key.hash();
     const entry = this.entry(hash, key);
@@ -122,7 +143,9 @@ export class IndexMap<K extends Hashable, T> {
       }
     }
   }
-
+  /**
+  * Deletes the given key of this indexmap. If void is given, then it did not exist
+  */
   delete(key: K) {
     const hash = key.hash();
     let bucket = hash & this.binmask;
@@ -197,7 +220,9 @@ Number.prototype.hash = function() {
   return this | 0;
 }
 
-
+/**
+ * Implementation of a basic benchmark
+ */
 function main() {
   const limit = 100000;
   const map = new IndexMap<number, string>();
